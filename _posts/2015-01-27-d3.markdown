@@ -13,5 +13,5 @@ categories: D3
 [Animation Version 3][animation_v1] - 1/28/15 Animation with linear movement with respect tot the x axis.
 
 [animation_v1]: 	https://ndcornelius.github.io/assets/d3/animation_v1.html
-[animation_v2]		https://ndcornelius.github.io/assets/d3/animation_v2.html
-[animation_v3]		https://ndcornelius.github.io/assets/d3/animation_v3.html
+[animation_v2]:	https://ndcornelius.github.io/assets/d3/animation_v2.html
+[animation_v3]:	https://ndcornelius.github.io/assets/d3/animation_v3.html
