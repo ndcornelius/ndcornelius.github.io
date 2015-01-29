@@ -8,9 +8,9 @@ categories: D3
 
 [Animation Version 1][animation_v1] - 1/14/15 Basic plot with single graph.
 
-[Animation Version 2][animation_v1] - 1/21/15 Animation with both ECG and CVP plost with option to upload data.
+[Animation Version 2][animation_v2] - 1/21/15 Animation with both ECG and CVP plost with option to upload data.
 
-[Animation Version 3][animation_v1] - 1/28/15 Animation with linear movement with respect tot the x axis.
+[Animation Version 3][animation_v3] - 1/28/15 Animation with linear movement with respect tot the x axis.
 
 [animation_v1]: 	https://ndcornelius.github.io/assets/d3/animation_v1.html
 [animation_v2]:	https://ndcornelius.github.io/assets/d3/animation_v2.html
