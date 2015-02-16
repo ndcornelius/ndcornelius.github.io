@@ -14,7 +14,10 @@ categories: D3
 
 [Animation Version 4][animation_v4] - 2/6/15 Huge modularity improvement in preperation for arbitrary input columns. Added basic phase plot.
 
+[Animation Version 5][animation_v5] - 2/15/15 More efficient transtiions. 2D plot transitioning correctly.
+
 [animation_v1]: 	https://ndcornelius.github.io/assets/d3/animation_v1.html
 [animation_v2]:	https://ndcornelius.github.io/assets/d3/animation_v2.html
 [animation_v3]:	https://ndcornelius.github.io/assets/d3/animation_v3.html
 [animation_v4]:	https://ndcornelius.github.io/assets/d3/animation_v4.html
+[animation_v5]:	https://ndcornelius.github.io/assets/d3/animation_v5.html
