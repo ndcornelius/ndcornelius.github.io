@@ -32,4 +32,4 @@ Old Versions:
 [animation_v3]:	https://ndcornelius.github.io/assets/d3/animation_v3.html
 [animation_v4]:	https://ndcornelius.github.io/assets/d3/animation_v4.html
 [animation_v5]:	https://ndcornelius.github.io/assets/d3/animation_v5.html
-[animation_v6];	https://ndcornelius.github.io/assets/d3/animation.html
+[animation_v6]:	https://ndcornelius.github.io/assets/d3/animation.html
