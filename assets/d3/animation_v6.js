@@ -49,6 +49,10 @@
 					min: d3.min(data, function(d) {return +d[keys[b]];})}
 					
 		var duration = 1000*(x.max-x.min);
+					
+		if (duration > 10000) {
+			duration = 10000
+		}
 							
 		var xScale = d3.scale.linear()
 				.domain([x.min, x.max])
@@ -140,6 +144,9 @@
 					min: d3.min(data, function(d) {return +d[keys[t]];})}
 					
 		var duration = 1000*(t.max-t.min);
+							if (duration > 10000) {
+			duration = 10000
+		}
 							
 		var xScale = d3.scale.linear()
 				.domain([x.min, x.max])
