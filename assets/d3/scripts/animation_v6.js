@@ -455,7 +455,7 @@ function zoom(id, a, b) {
   
     // Loads displays the default data file
 function initialData() {
-    d3.text("../data/sin_cos.csv", function (csv) { 
+    d3.text("data/sin_cos.csv", function (csv) { 
     
         previewData(csv)
         loadData();
