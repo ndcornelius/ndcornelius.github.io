@@ -1,8 +1,47 @@
 
+
+/*var dataViz = {
+    
+    viz3d : {
+        
+        height: 0,
+        width: 0,
+        margin: {},
+        renderer,
+        camera,
+        container,
+        axisRenderer,
+        axisCamera,
+        axisContainer,
+        init,
+        plot
+        
+    
+    
+    },
+
+    viz2d : {
+        
+        height: 0,
+        width: 0,
+        margin: {},
+        anmations,
+        init,
+        plot;
+        
+    },
+    
+    data,
+    keys;
+    scales
+    
+}*/
+
+
 var height, width, margin;
 var height3, width3;
-var data, keys, renderer, camera, container;
-var markers;
+var data, keys, renderer, camera, container, fileData, renderer2, camera2, container2;
+var anmations;
 //var duration, stop;
 
 
@@ -15,13 +54,17 @@ initialData();
 
 function init() {
     
-    d3.select("body")
-        .append("p")
+    d3.select("#upload")
+        .append("div")
         .attr("id", "keys");
     
     d3.select("body")
         .append("div")
         .attr("id", "plot3d");
+        
+    d3.select("#plot3d")
+        .append("div")
+        .attr("id", "axes3d");
     
     d3.select("body")
         .append("div")
@@ -34,17 +77,31 @@ function init() {
     height = 170;
     width = 900;
     margin = {top: 40, left: 50, right: 20, bottom: 30}
-    width3 = (1/1.6)*width;
-    height3 =  width; //1.6*width;
+    width3 = window.innerWidth-650;
+    height3 =  width3*1/1.6;
+    axesWidth = width3/5;
+    axesHeight = width3/5;
     
     renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
-    renderer.setSize(height3, width3);
+    renderer.setSize(width3, height3);
+    
+    renderer2 = new THREE.WebGLRenderer({antialias:true, alpha:true});
+    renderer2.setSize(axesWidth, axesHeight);
     
     container = document.getElementById('plot3d').appendChild(renderer.domElement);
+    container2 = document.getElementById('axes3d').appendChild(renderer2.domElement);
     
-    camera = new THREE.PerspectiveCamera(45, height3 / width3, 1, 500);
+    camera = new THREE.PerspectiveCamera(45, width3 / height3, 1, 1000);
     camera.position.set(0, 0, 100);
-    //camera.lookAt(new THREE.Vector3(0, 0, 0));
+    
+    camera2 = new THREE.PerspectiveCamera( 50, axesWidth / axesHeight, 1, 1000 );
+    camera2.up = camera.up; // important!
+    
+    camera.lookAt(new THREE.Vector3(0, 0, 0));
+    
+    d3.select("#axes3d")
+        .style("width", axesWidth)
+        .style("height", 1);
             
 }
 
@@ -77,6 +134,7 @@ function plot(id, x, y, variables) {
         .range([0, height - margin.top - margin.bottom]);
     
     var svg = d3.select(div)
+        .append("div")
         .append("svg")
         .attr("width", width)
         .attr("height", height)
@@ -155,12 +213,148 @@ function plot(id, x, y, variables) {
 
 }
 
-
-/*function sizeChange(id) {
-    //TODO
-    d3.select('#' + id)append("g").attr("transform", "scale(" + $("#container").width()/900 + ")");
+function threeDScatterPlot(x, y, z) {
     
-}*/
+    var scene = new THREE.Scene();
+    var axisScene = new THREE.Scene();
+    //scene.add(camera);
+                                
+    var xScale = d3.scale.linear()
+            .domain(d3.extent( data, function(d) {return +d[keys[x]]}))
+            .range([-15, 15]);
+            
+    var yScale = d3.scale.linear()
+            .domain(d3.extent( data, function(d) {return +d[keys[y]]}).reverse())
+            .range([-15, 15]);
+    
+    var tScale = d3.scale.linear()
+            .domain(d3.extent( data, function(d) {return +d[keys[z]]}).reverse())
+            .range([-15, 15]);
+            
+    
+    var material = new THREE.MeshBasicMaterial({
+        color: 0x333333
+    });
+    var radius = 0.2;
+    var segments = 10;
+    var geometry = new THREE.SphereGeometry( radius, segments );
+    for (var i=0; i<data.length; i++) {
+        var circle = new THREE.Mesh( geometry, material );
+        var entry = data[i];
+        circle.position.y = tScale(entry[keys[y]]);
+        circle.position.x = xScale(entry[keys[x]]);
+        circle.position.z = yScale(entry[keys[z]]);
+        scene.add(circle)
+    }
+    
+    controls = new THREE.TrackballControls( camera, container );
+    /*var bb = new THREE.Box3()
+    bb.setFromObject(line);
+    bb.center(controls.target);*/
+    controls.target = new THREE.Vector3( 0, 0, 0 );
+    
+    axis = new THREE.AxisHelper( 100 );
+    axisScene.add( axis );
+    
+    
+    
+    function render() {
+        renderer.render(scene, camera);
+        renderer2.render(axisScene, camera2);
+    }
+    
+        
+    function animate() {
+        
+        requestAnimationFrame(animate);
+
+        controls.update();
+        
+        camera2.position.copy( camera.position );
+        camera2.position.sub( controls.target );
+        camera2.position.setLength( 300 );
+        
+        camera2.lookAt( axisScene.position );
+        
+        render();
+    }
+    
+    animate();
+    
+}
+
+function threeDLinePlot(a, b, t ) {
+    
+    var scene = new THREE.Scene();
+    var scene2 = new THREE.Scene();
+    //scene.add(camera);
+                                
+    var xScale = d3.scale.linear()
+            .domain(d3.extent( data, function(d) {return +d[keys[b]]}))
+            .range([0, 15]);
+            
+    var yScale = d3.scale.linear()
+            .domain(d3.extent( data, function(d) {return +d[keys[t]]}).reverse())
+            .range([0, 15]);
+            
+    var tScale = d3.scale.linear()
+            .domain(d3.extent( data, function(d) {return +d[keys[a]]}).reverse())
+            .range([-15, 15]);
+            
+    var geometry = new THREE.Geometry();
+    var material = new THREE.LineBasicMaterial({
+        color: 0x333333
+    });
+    for (var i=0; i<data.length; i++) {
+    
+        var entry = data[i];
+        var p1 = tScale(entry[keys[t]]);
+        var p2 = xScale(entry[keys[b]]);
+        var p3 = yScale(entry[keys[a]]);
+        geometry.vertices.push(new THREE.Vector3(p1, p2, p3));
+    }
+
+    var line = new THREE.Line(geometry, material);
+    scene.add(line);
+    
+
+    
+    controls = new THREE.TrackballControls( camera, container );
+    var bb = new THREE.Box3()
+    bb.setFromObject(line);
+    bb.center(controls.target);
+    
+    axis = new THREE.AxisHelper( 100 );
+    scene2.add( axis );
+    
+    function render() {
+        renderer.render(scene, camera);
+        renderer2.render(scene2, camera2);
+    }
+    
+        
+    function animate() {
+        
+        requestAnimationFrame(animate);
+
+        controls.update();
+        
+        camera2.position.copy( camera.position );
+        camera2.position.sub( controls.target );
+        camera2.position.setLength( 300 );
+        
+        camera2.lookAt( scene2.position );
+        
+        render();
+    }
+    
+    animate();
+}
+
+//function sizeChange(id) {
+    //TODO
+    
+//}
 
 function zoom(id, a, b) {
     
@@ -199,49 +393,110 @@ function zoom(id, a, b) {
         svg.select(".y.axis").call(yAxis);
     }
 }
-
-
-function threeInit() {
-    renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
-    renderer.setSize(height3, width3);
-    
-    d3. select("body")
-        .append("div")
-        .attr("id", "threevarplot")
-            
-    container = document.getElementById('threevarplot').appendChild(renderer.domElement);
-    camera = new THREE.PerspectiveCamera(45, height3 / width3, 1, 500);
-    camera.position.set(0, 0, 100);
-    //camera.lookAt(new THREE.Vector3(0, 0, 0));
-}
   
-    // Default data display
+    // Loads displays the default data file
 function initialData() {
-    d3.csv("sin_cos.csv", function (fileData) { 
+    d3.text("sin_cos.csv", function (csv) { 
     
-        data = fileData;
-        keys = d3.keys(data[0]);
-        
-        draw();
+        previewData(csv)
+        loadData();
     });
 }
 
+// Function: tabulate
+// Parameters: data, maxLength
+// Takes parsed csv data and creates a custom html <div> table with the
+// labels on the left side, the first data points up to maxLength extending to the right, 
+// and a check box to the left of each label. Example:
+// 
+// -------------------------------
+// []_|_A_|_1_|_2_|_3_|_4_|_5_|...
+// []_|_B_|_1_|_2_|_3_|_4_|_5_|...
+// []_|_C_|_1_|_2_|_3_|_4_|_5_|...
+// ...
 
-function draw() {
+
+function tabulate(data, maxLength) {
     
-    var text = "";
-    for (var k in keys) {
-        text = text +" " + keys
+    var row;
+    var keys = d3.keys(data[0]);
+    var tableData = [];
+    
+    maxLength =  (maxLength < data.length) ? maxLength : data.length; // Sets the maximum number of values to display to the length of the data if it is shorter than maxlength
+    
+    var table = d3.select("#keys")
+        .append("div")
+            .attr("id","dataPreview")
+            .append("div")
+                .attr("class", "table")
+                .attr("id", "dataTable");
+            
+    for (var i=0; i<keys.length; i++) {
+        
+        row = table.append("div")
+            .attr("class", "tableRow");
+            
+        row.append("div")
+            .attr("class", "limitedBox")
+                .append("input")
+                    .attr("type", "checkbox")
+                    .attr("onclick", "return validateChecks(this)")
+                    .attr("id", keys[i] + "box");
+
+            
+        row.append("div")
+            .attr("class", "tableHead")
+                .append("p")
+                    .attr("id", "t" + keys[i])
+                    .text(keys[i]);
+        
+        for(var j=0; j<maxLength; j++) {
+            
+            var entry = data[j];
+            
+            row.append("div")
+            .attr("class", "tableCell")
+                .append("p")
+                    .text(Math.round(+entry[keys[i]] * 100000)/100000); // Only limits decimal places
+        }
+    }  
+}
+
+var color = 0;
+function dataColor () {
+    colors = ["blue", "green", "red"]
+    console.log(color);
+    return colors[color]
+}
+
+function draw(x) {
+    
+    color = 0;
+    
+    var columns = [];
+    
+    anmations = {};
+    
+    for( var i=0; i<keys.length; i++) {
+        box = document.getElementById(keys[i] + "box");
+        if( box.checked) {
+            columns.push(i);
+            d3.select("#t" + keys[i])
+                .style("color", dataColor());
+            color++;
+        }
     }
-        d3.select("#keys")
-            //.html(text);
     
-    markers = {};
+    if (columns.length == 0) {
+        columns = [0, 1, 2]
+    }
+    console.log(columns);
 
     plot("svg1", keys[0], keys[1], 1);
     plot("svg2", keys[0], keys[2], 1);
     plot("svg3", keys[1], keys[2], 2);
-    threeVarPlot(0, 1, 2);
+    
+    x === 0 ? threeDLinePlot(columns[0], columns[1], columns[2]) : threeDScatterPlot(columns[0], columns[1], columns[2]);
     
     time = d3.extent(data, function(d) {return +d[keys[0]]});
     duration = (+time[1] - +time[0]) * 1000;
@@ -254,8 +509,8 @@ function draw() {
     transitionElement("svg2", 0, 2, duration, 170, 900);
     transitionElement("svg3", 1, 2, duration, 400, 400);
     
-    for (var i in markers) { 
-        markers[i]();
+    for (var i in anmations) { 
+        anmations[i]();
     }
 
     
@@ -264,67 +519,13 @@ function draw() {
     zoom("svg3", 1, 2);*/
 }
 
-/*
-function transitionElement( id, a, b, duration) {
-    
-    var svg = d3.select("#" + id)
-    
-    var height = svg.style("height")
-    var width = svg.style("width")
-    
-    var circle = svg.append("circle")
-        //.attr("class", "marker")
-        .attr("id", id + "marker")
-        .attr("r", 6);
-        
-    function transition() {
-        circle.interrupt().transition()
-            .duration(duration)
-            .attrTween("transform", translateOn( a, b, height, width))
-            .ease("linear")
-            .each("end", transition);
-    }
-    
-    transition()
-    
-}
-
-function translateOn(u, v, height, width) {
-    
-    var time, x, y, row;
-    
-    var scale = d3.scale.linear()
-        .domain([0, 1])
-        .range([0, data.length - 1]);
-        
-    var uScale = d3.scale.linear()
-        .domain(d3.extent(data, function(d) {return +d[keys[u]]}))
-        .range([0, width -margin.left-margin.right]);
-        
-    var vScale = d3.scale.linear()
-        .domain(d3.extent(data, function(d) {return +d[keys[v]]}).reverse())
-        .range([0, height - margin.top - margin.bottom]);
-    
-    return function (d, i, a) {
-        return function (t) {
-            time = Math.floor(scale(t));
-            row = data[time];
-            x = uScale(row[keys[u]]);
-            y = vScale(row[keys[v]]);
-            
-            return "translate(" + x + "," + y + ")";
-        }
-    }
-}*/
 
 function transitionElement( id, a, b, duration, height, width) {
     
     // Init calculate scales and return negative y?
     
     var svg = d3.select("#" + id)
-    
-    //var height = svg.style("height")
-    //var width = svg.style("width")
+   
     
     var circle = svg.append("circle")
         //.attr("class", "marker")
@@ -339,41 +540,51 @@ function transitionElement( id, a, b, duration, height, width) {
         .domain(d3.extent(data, function(d) {return +d[keys[a]]}))
         .range([0, width -margin.left-margin.right]);
         
-        //console.log(height);
-        
     var bScale = d3.scale.linear()
         .domain(d3.extent(data, function(d) {return +d[keys[b]]}).reverse())
         .range([0, height - margin.top - margin.bottom]);
         
-    function transition () {
+    var pathArray = constructPathArray(a, b, aScale, bScale);
         
-        /*if (stop) { return ;
-        console.log("returned out of transition");}
-        else {*/
+    function transition () {
             circle.interrupt().transition()
                 .duration(duration)
-                .attrTween("transform", translateOn(a, b, transitionScale, aScale, bScale))
+                .attrTween("transform", translateOn(transitionScale, pathArray))
                 .ease("linear")
                 .each("end", transition);
-        //}
     }
-    function markersLength () { 
+    function anmationsLength () { 
         var t = 0;
-        for (var i in markers) { 
-            console.log(i);
+        for (var i in anmations) { 
             t++; 
         }
         return t;
     }
 
-    markers["t" + markersLength()] = transition;
+    anmations["t" + anmationsLength()] = transition;
     //transition()
     
 }
 
-function translateOn(u, v, scale, uScale, vScale) {
+function constructPathArray(u, v, uScale, vScale) {
     
-    var time, x, y, row;
+    pathArray = [];
+    
+    for (var i=0; i<data.length; i++) {
+        row = data[i]
+        pathArray.push({
+            x: uScale(row[keys[u]]),
+            y: vScale(row[keys[v]])
+        })
+    }
+    
+    return pathArray;
+    
+}
+
+function translateOn(scale, pathArray) {
+    
+    var time, row;
     
     
     return function(d, i, a) {
@@ -383,87 +594,42 @@ function translateOn(u, v, scale, uScale, vScale) {
             if ( typeof data[time] === 'undefined' ) {
                 return "translate(0, 0)";
             }
-            row = data[time];
-            x = uScale(row[keys[u]]);
-            y = vScale(row[keys[v]]);
-            //console.log(x);
+            row = pathArray[time];
             
-            return "translate(" + x + "," + y + ")";
+            return "translate(" + row.x + "," + row.y + ")";
         }
     }
 }
 
-function threeVarPlot(a, b, t ) {
-    
-    var scene = new THREE.Scene();
-    scene.add(camera);
-            
-            var x = { max: d3.max( data, function(d) {return +d[keys[b]];}),
-                min: d3.min(data, function(d) {return +d[keys[b]];})}		
-                            
-            var y = { max: d3.max(data, function(d) {return +d[keys[t]];}), 
-                        min: d3.min(data, function(d) {return +d[keys[t]];})}
-                        
-            var t = { max: d3.max(data, function(d) {return +d[keys[a]];}), 
-                        min: d3.min(data, function(d) {return +d[keys[a]];})}
-                                
-            var xScale = d3.scale.linear()
-                    .domain([x.min, x.max])
-                    .range([-15, 15]);
-                    
-            var yScale = d3.scale.linear()
-                    .domain([y.max, y.min])
-                    .range([-15, 15]);
-                    
-            var tScale = d3.scale.linear()
-                    .domain([t.max, t.min])
-                    .range([-25, 25]);
-                    
-            var geometry = new THREE.Geometry();
-            var material = new THREE.LineBasicMaterial({
-                color: 0x333333
-                //color: 0x4682b4
-            });
-            for (var i=0; i<data.length; i++) {
-            
-                var entry = data[i];
-                var p1 = tScale(entry[keys[0]]);
-                var p2 = xScale(entry[keys[1]]);
-                var p3 = yScale(entry[keys[2]]);
-                geometry.vertices.push(new THREE.Vector3(p1, p2, p3));
-            }
-        
-            var line = new THREE.Line(geometry, material);
-            scene.add(line);
-            
-            
-            controls = new THREE.TrackballControls( camera, container );
-            controls.target.set( 0, 0, 0 );
-            
-            function animate() {
-                
-            requestAnimationFrame(animate);
-            renderer.render(scene, camera);
-            controls.update();
-            }
-            
-            animate();
-}
+
 
 openFile("uploader");
 
-function loadData(csv) {
+function previewData(csv) {
     
-    //stop = true;
+    d3.select("#dataTable")
+        .remove();
+        
+    checksCount = 0;
+        
+    fileData = d3.csv.parse(csv);
+    fileKeys = d3.keys(fileData[0]);
+        
+    tabulate(fileData, 1000);
+    
+}
+
+function loadData(x) {
+    
+    console.log("load data");
+                
+    data = fileData;
+    keys = fileKeys;
     
     d3.selectAll("svg").remove();
-    var fileData = d3.csv.parse(csv);		
-    
-    keys = d3.keys(fileData[0]);
-    data = fileData;
-    
-    draw();
+    draw(x);   
 }
+
 // Code to open the user uploaded file using HTML5 FileReader
 function openFile(element) {
     var input = document.getElementById(element);
@@ -471,7 +637,7 @@ function openFile(element) {
     
     reader.onload = function(e) {
         var text = e.target.result;
-        loadData(text);
+        previewData(text);
     }
     
     uploader.addEventListener("change", handleFile, false);
@@ -479,6 +645,24 @@ function openFile(element) {
     function handleFile() {
         var file = this.files[0];
         reader.readAsText(file);
+    }
+}
+
+
+var checksCount = 0;
+function validateChecks(box) 
+{
+    if (!box.checked) {
+        checksCount--;
+        console.log(checksCount);
+    }
+    else {
+        checksCount++;
+        if (checksCount > 3)
+        {
+            checksCount--;
+            box.checked = false;
+        }
     }
 }
 
