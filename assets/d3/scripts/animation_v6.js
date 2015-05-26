@@ -46,7 +46,7 @@ var anmations;
 
 
 
-//var scale[];
+var scales = {};
 init();
 initialData();
 
@@ -92,7 +92,7 @@ function init() {
     container2 = document.getElementById('axes3d').appendChild(renderer2.domElement);
     
     camera = new THREE.PerspectiveCamera(45, width3 / height3, 1, 1000);
-    camera.position.set(0, 0, 100);
+    camera.position.set(0, 0, 20);
     
     camera2 = new THREE.PerspectiveCamera( 50, axesWidth / axesHeight, 1, 1000 );
     camera2.up = camera.up; // important!
@@ -105,10 +105,15 @@ function init() {
             
 }
 
-function plot(id, x, y, variables) {
+// Function: twoDLinePlot
+// Parameters: id, x, y variables
+// twoDLinePlot takes two .csv keys 'x' and 'y' and creates a line graph
+// in the given container 'id' using d3.js. variables denotes whether the
+// graph should be rectangular or square.
+
+function twoDLinePlot(id, x, y, variables) {
     
     var height, width, yTicks, xTicks, div;
-    
     
     if (variables == 1) { //Plot with only one variable with respect to time. (x axis is time)
         xTicks = 7;
@@ -191,66 +196,44 @@ function plot(id, x, y, variables) {
     }
     
     addAxes();
-    
-    
-    
-    
-  /*  var circle = svg.append("circle")
-        .attr("class", "marker")
-        .attr("id", id + "marker")
-        .attr("r", 6);
-        
-    function transition() {
-        circle.interrupt().transition()
-            .duration(duration)
-            .attrTween("transform", translateAlong(plot.node()))
-            .ease("linear")
-            .each("end", transition);
-    }
-    
-    transition()*/
-    
-
 }
+
+// Function: threeDScatterPlot
+// Parameters: x, y, z
+// threeDScatterPlot takes three .csv column keys from the loaded data and 
+// creates a 3d scatter plot of the data using three.js.
 
 function threeDScatterPlot(x, y, z) {
     
-    var scene = new THREE.Scene();
-    var axisScene = new THREE.Scene();
-    //scene.add(camera);
-                                
-    var xScale = d3.scale.linear()
-            .domain(d3.extent( data, function(d) {return +d[keys[x]]}))
-            .range([-15, 15]);
-            
-    var yScale = d3.scale.linear()
-            .domain(d3.extent( data, function(d) {return +d[keys[y]]}).reverse())
-            .range([-15, 15]);
+    var projector, mouse = { x: 0, y: 0 }, INTERSECTED;
+    projector = new THREE.Projector();
     
-    var tScale = d3.scale.linear()
-            .domain(d3.extent( data, function(d) {return +d[keys[z]]}).reverse())
-            .range([-15, 15]);
-            
+    var scene = new THREE.Scene();
+    var axisScene = new THREE.Scene();          
     
     var material = new THREE.MeshBasicMaterial({
         color: 0x333333
     });
-    var radius = 0.2;
-    var segments = 10;
+    var radius = 0.08;
+    var segments = 12;
     var geometry = new THREE.SphereGeometry( radius, segments );
-    for (var i=0; i<data.length; i++) {
-        var circle = new THREE.Mesh( geometry, material );
-        var entry = data[i];
-        circle.position.y = tScale(entry[keys[y]]);
-        circle.position.x = xScale(entry[keys[x]]);
-        circle.position.z = yScale(entry[keys[z]]);
-        scene.add(circle)
+    var point, entryxScale, yScale, zScale;
+    xScale = scales[x];
+    yScale = scales[y];
+    zScale = scales[z];
+    
+    for (var i=0; i<data.length; i++) { 
+    
+        point = new THREE.Mesh( geometry, material );
+        entry = data[i];
+        
+        point.position.x = xScale(entry[x]) * 10 - 5;
+        point.position.y = yScale(entry[y]) * 10 - 5;
+        point.position.z = zScale(entry[z]) * 10 - 5;
+        scene.add(point)
     }
     
     controls = new THREE.TrackballControls( camera, container );
-    /*var bb = new THREE.Box3()
-    bb.setFromObject(line);
-    bb.center(controls.target);*/
     controls.target = new THREE.Vector3( 0, 0, 0 );
     
     axis = new THREE.AxisHelper( 100 );
@@ -277,47 +260,100 @@ function threeDScatterPlot(x, y, z) {
         camera2.lookAt( axisScene.position );
         
         render();
+        update();
     }
     
     animate();
     
+    document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+    
+    function onDocumentMouseMove( event ) 
+    {
+        event.preventDefault();
+        
+        mouse.x = ( event.clientX / width3 ) * 2 - 1;
+        mouse.y = - ( event.clientY / height3 ) * 2 + 1;
+    }
+    
+    function update() {
+	// find intersections
+
+	// create a Ray with origin at the mouse position
+	//   and direction into the scene (camera direction)
+	var vector = new THREE.Vector3( mouse.x, mouse.y, 1 );
+	projector.unprojectVector( vector, camera );
+	var ray = new THREE.Raycaster( camera.position, vector.sub( camera.position ).normalize() );
+
+	// create an array containing all objects in the scene with which the ray intersects
+	var intersects = ray.intersectObjects( scene.children );
+
+	// INTERSECTED = the object in the scene currently closest to the camera 
+	//		and intersected by the Ray projected from the mouse position 	
+	
+	// if there is one (or more) intersections
+	if ( intersects.length > 0 )
+	{
+		// if the closest object intersected is not the currently stored intersection object
+		if ( intersects[ 0 ].object != INTERSECTED ) 
+		{
+		    // restore previous intersection object (if it exists) to its original color
+			if ( INTERSECTED ) 
+				INTERSECTED.material.color.setHex( INTERSECTED.currentHex );
+			// store reference to closest object as current intersection object
+			INTERSECTED = intersects[ 0 ].object;
+			// store color of closest object (for later restoration)
+			INTERSECTED.currentHex = INTERSECTED.material.color.getHex();
+			// set a new color for closest object
+			INTERSECTED.material.color.setHex( 0xffff00 );
+		}
+	} 
+	else // there are no intersections
+	{
+		// restore previous intersection object (if it exists) to its original color
+		if ( INTERSECTED ) 
+			INTERSECTED.material.color.setHex( INTERSECTED.currentHex );
+		// remove previous intersection object reference
+		//     by setting current intersection object to "nothing"
+		INTERSECTED = null;
+	}
+
+	controls.update();
+}
+    
+    
+    
 }
 
-function threeDLinePlot(a, b, t ) {
+// Function: threeDLinePlot
+// Parameters: x, y, z
+// threeDLinePlot takes three .csv column keys from the loaded data and 
+// creates a 3d line plot of the data using three.js.
+
+function threeDLinePlot(x, y, z) {
     
     var scene = new THREE.Scene();
-    var scene2 = new THREE.Scene();
-    //scene.add(camera);
-                                
-    var xScale = d3.scale.linear()
-            .domain(d3.extent( data, function(d) {return +d[keys[b]]}))
-            .range([0, 15]);
-            
-    var yScale = d3.scale.linear()
-            .domain(d3.extent( data, function(d) {return +d[keys[t]]}).reverse())
-            .range([0, 15]);
-            
-    var tScale = d3.scale.linear()
-            .domain(d3.extent( data, function(d) {return +d[keys[a]]}).reverse())
-            .range([-15, 15]);
+    var axisScene = new THREE.Scene();  
             
     var geometry = new THREE.Geometry();
     var material = new THREE.LineBasicMaterial({
         color: 0x333333
     });
+    var entry, p1, p2, p3, xScale, yScale, zScale;
+    xScale = scales[x];
+    yScale = scales[y];
+    zScale = scales[z];
     for (var i=0; i<data.length; i++) {
     
-        var entry = data[i];
-        var p1 = tScale(entry[keys[t]]);
-        var p2 = xScale(entry[keys[b]]);
-        var p3 = yScale(entry[keys[a]]);
+        entry = data[i];
+        p1 = xScale(entry[x]) * 10 - 5;
+        p2 = yScale(entry[y]) * 10 - 5;
+        p3 = zScale(entry[z]) * 10 - 5;
         geometry.vertices.push(new THREE.Vector3(p1, p2, p3));
+        console.log(scales[x]);
     }
 
     var line = new THREE.Line(geometry, material);
     scene.add(line);
-    
-
     
     controls = new THREE.TrackballControls( camera, container );
     var bb = new THREE.Box3()
@@ -325,11 +361,11 @@ function threeDLinePlot(a, b, t ) {
     bb.center(controls.target);
     
     axis = new THREE.AxisHelper( 100 );
-    scene2.add( axis );
+    axisScene.add( axis );
     
-    function render() {
+     function render() {
         renderer.render(scene, camera);
-        renderer2.render(scene2, camera2);
+        renderer2.render(axisScene, camera2);
     }
     
         
@@ -343,7 +379,7 @@ function threeDLinePlot(a, b, t ) {
         camera2.position.sub( controls.target );
         camera2.position.setLength( 300 );
         
-        camera2.lookAt( scene2.position );
+        camera2.lookAt( axisScene.position );
         
         render();
     }
@@ -396,9 +432,12 @@ function zoom(id, a, b) {
   
     // Loads displays the default data file
 function initialData() {
-    d3.text("sin_cos.csv", function (csv) { 
+    d3.text("../data/sin_cos.csv", function (csv) { 
     
-        previewData(csv)
+        previewData(csv);
+        for (var i=0; i<3; i++) {
+            document.getElementById(fileKeys[i] + "box").checked = true;
+        }
         loadData();
     });
 }
@@ -464,7 +503,7 @@ function tabulate(data, maxLength) {
 
 var color = 0;
 function dataColor () {
-    colors = ["blue", "green", "red"]
+    colors = ["red", "green", "blue"]
     console.log(color);
     return colors[color]
 }
@@ -477,24 +516,35 @@ function draw(x) {
     
     anmations = {};
     
+    var numChecked = 0;
+    
     for( var i=0; i<keys.length; i++) {
         box = document.getElementById(keys[i] + "box");
         if( box.checked) {
-            columns.push(i);
+            columns.push(keys[i]);
             d3.select("#t" + keys[i])
                 .style("color", dataColor());
             color++;
+            numChecked++;
+        }
+        else {
+            d3.select("#t" + keys[i])
+                .style("color", "black");
         }
     }
     
-    if (columns.length == 0) {
-        columns = [0, 1, 2]
+    if (numChecked !=3) {
+        alert("Please select 3 rows.");
+        return;
     }
-    console.log(columns);
+    
+    if (columns.length == 0) {
+        columns = [keys[0], keys[1], keys[2]]
+    }
 
-    plot("svg1", keys[0], keys[1], 1);
-    plot("svg2", keys[0], keys[2], 1);
-    plot("svg3", keys[1], keys[2], 2);
+    twoDLinePlot("svg1", keys[0], keys[1], 1);
+    twoDLinePlot("svg2", keys[0], keys[2], 1);
+    twoDLinePlot("svg3", keys[1], keys[2], 2);
     
     x === 0 ? threeDLinePlot(columns[0], columns[1], columns[2]) : threeDScatterPlot(columns[0], columns[1], columns[2]);
     
@@ -620,14 +670,20 @@ function previewData(csv) {
 }
 
 function loadData(x) {
-    
-    console.log("load data");
-                
+
     data = fileData;
     keys = fileKeys;
     
+    for(i in keys) {
+        scales[keys[i]] = d3.scale.linear()
+                        .domain(d3.extent(data, function(d) {return +d[keys[i]]}))
+                        .range([0, 1]);
+    }
+    
+    console.log(scales);
+    d3.selectAll("circle").interrupt();
     d3.selectAll("svg").remove();
-    draw(x);   
+    draw(x);
 }
 
 // Code to open the user uploaded file using HTML5 FileReader
